@@ -30,7 +30,8 @@ const BoxDecoration clearBackground = BoxDecoration(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight));
 
-const String apiKeyForWeather = "288215c433ffb3a0177d455c0c0b2375";
+const String apiKeyOpenWeather = "288215c433ffb3a0177d455c0c0b2375";
+const String apiKeyWeatherBit = "089633a29e41407fb4ec076bd8b62740";
 
 const IconData location = weather_icons.WeatherIcons.location;
 const IconData calendar = weather_icons.WeatherIcons.calendar;

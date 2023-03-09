@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:weather_app/permission_handling_page.dart';
-import 'global.dart' as global;
+import 'global.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
+// import './models/weather_models.dart';
 
 void main() {
   // DartPluginRegistrant.ensureInitialized();
@@ -37,7 +39,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    global.getUserCity((value) {
+    getUserCity((value) {
       setState(() {
         gotUserLocation = !gotUserLocation;
         city = value;
@@ -48,7 +50,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: global.clearBackground,
+      decoration: clearBackground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: appBar(),
@@ -83,38 +85,63 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-          Container(child: global.sun),
+          Container(child: sun),
           _temperature(),
           _metaData(),
-          _todayForecast()
+          _todayForecast(),
+          test()
         ]));
+  }
+
+  Widget test() {
+    return FutureBuilder(
+      // future: ,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Text("Waiting");
+        }
+        if (snapshot.connectionState == ConnectionState.done) {
+          return Text("done");
+        } else {
+          return Text("else");
+        }
+      },
+    );
   }
 
   Widget _todayForecast() {
     return Container(
       decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(25)),
-        color: Color(0xFF298BC2),
-      ),
+          color: Color(0xFF298BC2),
+          borderRadius: BorderRadius.all(Radius.circular(25))),
       width: MediaQuery.of(context).size.width / 1.1,
       height: MediaQuery.of(context).size.height / 3,
-      child: Column(children: [
+      child:
+          Column(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
         Container(
-          margin: EdgeInsets.only(top: 10),
           width: MediaQuery.of(context).size.width / 1.3,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 "Today",
-                style: global.semiBoldFont(17),
+                style: semiBoldFont(17),
               ),
               Text(
                 '${DateFormat('EEEE').format(DateTime.now())},${DateTime.now().day.toString()}',
-                style: global.semiBoldFont(17),
-              )
+                style: semiBoldFont(17),
+              ),
             ],
           ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _hourlyTemperature("31°", Icons.cloud, "15.00"),
+            _hourlyTemperature("30°", Icons.cloud, "16.00"),
+            _hourlyTemperature("28°", Icons.cloud, "17.00"),
+            _hourlyTemperature("28°", Icons.cloud, "18.00  "),
+          ],
         )
       ]),
     );
@@ -131,9 +158,9 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _metaDataObject(global.rain, "18%", 20, 70),
-            _metaDataObject(global.temperature, "67%", 25, 70),
-            _metaDataObject(global.wind, "25Km/h", 17, 100),
+            _metaDataObject(rain, "18%", 20, 70),
+            _metaDataObject(temperature, "67%", 25, 70),
+            _metaDataObject(wind, "25Km/h", 17, 100),
           ],
         ));
   }
@@ -152,8 +179,36 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           Text(
             data,
-            style: global.regularFont(19),
+            style: regularFont(19),
           )
+        ],
+      ),
+    );
+  }
+
+  Widget _hourlyTemperature(String temperature, IconData icon, String hour) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFF65C0FF), width: 2),
+        borderRadius: const BorderRadius.all(Radius.circular(25)),
+      ),
+      height: MediaQuery.of(context).size.height / 5,
+      width: MediaQuery.of(context).size.width / 5,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Text(
+            temperature,
+            style: regularFont(20),
+          ),
+          Icon(
+            icon,
+            color: Colors.white,
+          ),
+          Text(
+            hour,
+            style: regularFont(20),
+          ),
         ],
       ),
     );
@@ -164,15 +219,15 @@ class _MyHomePageState extends State<MyHomePage> {
       children: [
         Text(
           "30°",
-          style: global.semiBoldFont(65),
+          style: semiBoldFont(65),
         ),
         Text(
           "Precipitations",
-          style: global.regularFont(19),
+          style: regularFont(19),
         ),
         Text(
           "Max:34° Min:28°",
-          style: global.regularFont(19),
+          style: regularFont(19),
         )
       ],
     );
@@ -185,13 +240,13 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(gotUserLocation ? city : "Waiting for Data"),
         backgroundColor: Colors.transparent,
         shadowColor: Colors.transparent,
-        leading: const Icon(global.location),
+        leading: const Icon(location),
         actions: [
           Container(
               margin: EdgeInsets.only(
                   right: MediaQuery.of(context).size.width / 2.1),
               child: const Icon(Icons.keyboard_arrow_down)),
-          const Icon(global.newNotification)
+          const Icon(newNotification)
         ],
         titleTextStyle:
             const TextStyle(fontFamily: "SF Pro Display", fontSize: 20),
