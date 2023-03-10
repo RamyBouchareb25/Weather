@@ -24,6 +24,10 @@ const BoxDecoration darkBackground = BoxDecoration(
         colors: [Color(0xFF08244F), Color(0xFF134CB5), Color(0xFF0B42AB)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight));
+const BoxDecoration loadingBackground = BoxDecoration(
+  color: Colors.white,
+);
+
 const BoxDecoration clearBackground = BoxDecoration(
     gradient: LinearGradient(
         colors: [Color(0xFF29B2DD), Color(0xFF33AADD), Color(0xFF2DC8EA)],
@@ -55,11 +59,11 @@ Future<String> getUserLocation(Position myLocation) async {
   return place.administrativeArea!;
 }
 
-getUserCity(void Function(String val) successFunction,
+getUserCity(void Function(String cityName, Position position) successFunction,
     void Function(Object? error, StackTrace stackTrace) errorFunction) {
   Geolocator.getCurrentPosition()
-      .then((value) => getUserLocation(value).then((value) {
-            successFunction(value);
+      .then((value) => getUserLocation(value).then((value2) {
+            successFunction(value2, value);
           }))
       .onError((error, stackTrace) {
     errorFunction(error, stackTrace);

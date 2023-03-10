@@ -36,7 +36,7 @@ class _ErrorPageState extends State<ErrorPage> {
                     setState(() {
                       dataGathering = GettingData.retreiving;
                       handleLocationPermission(context)
-                          .then((value) => getUserCity((val) {
+                          .then((value) => getUserCity((val, val2) {
                                 dataGathering = GettingData.retreived;
                                 Navigator.pop(context);
                                 Navigator.push(context, MaterialPageRoute(

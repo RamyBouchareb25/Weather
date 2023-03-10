@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:weather_app/permission_handling_page.dart';
 import 'global.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
-// import './models/weather_models.dart';
+import './models/weather_models.dart';
 
 void main() {
   // DartPluginRegistrant.ensureInitialized();
@@ -35,14 +38,19 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late String city;
+  late Position _position;
+  late ConnectionState loading;
+  bool doneLoading = false;
   bool gotUserLocation = false;
   @override
   void initState() {
     super.initState();
-    getUserCity((value) {
+    loading = ConnectionState.waiting;
+    getUserCity((cityName, position) {
       setState(() {
         gotUserLocation = !gotUserLocation;
-        city = value;
+        city = cityName;
+        _position = position;
       });
     }, (error, stackTrace) {});
   }
@@ -50,12 +58,25 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: clearBackground,
+      decoration:
+          loading == ConnectionState.done ? clearBackground : loadingBackground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: appBar(),
         body: body(),
       ),
+    );
+  }
+
+  void refresh() {
+    Future.delayed(
+      const Duration(microseconds: 1),
+      () {
+        if (!doneLoading) {
+          doneLoading = true;
+          setState(() {});
+        }
+      },
     );
   }
 
@@ -82,31 +103,59 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     }
     return Center(
-        child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-          Container(child: sun),
-          _temperature(),
-          _metaData(),
-          _todayForecast(),
-          test()
-        ]));
-  }
-
-  Widget test() {
-    return FutureBuilder(
-      // future: ,
+        child: FutureBuilder(
+      future:
+          getHourlyForecastWeatherBit(_position.latitude, _position.longitude),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Text("Waiting");
-        }
-        if (snapshot.connectionState == ConnectionState.done) {
-          return Text("done");
+          loading = ConnectionState.done;
+          refresh();
+          double deviceHeight = MediaQuery.of(context).size.height;
+          double deviceWidth = MediaQuery.of(context).size.width;
+          return Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  child: const CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 10,
+                  ),
+                ),
+                _lazyLoad(deviceHeight / 5, deviceWidth / 2.5),
+                _lazyLoad(deviceHeight / 15, deviceWidth / 1.1),
+                _lazyLoad(deviceHeight / 3, deviceWidth / 1.1),
+              ]);
+        } else if (snapshot.connectionState == ConnectionState.done) {
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              sun,
+              _temperature(),
+              _metaData(),
+              _todayForecast(),
+            ],
+          );
         } else {
-          return Text("else");
+          loading = ConnectionState.none;
+          return const Text('error');
         }
       },
-    );
+    ));
+  }
+
+  Widget _lazyLoad(double height, double width) {
+    return Shimmer.fromColors(
+        child: Container(
+          height: height,
+          width: width,
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(25)),
+              color: Colors.white),
+        ),
+        baseColor: const Color(0xFFe0e0e0),
+        highlightColor: Colors.white);
   }
 
   Widget _todayForecast() {
