@@ -41,6 +41,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late Position _position;
   late ConnectionState loading;
   bool doneLoading = false;
+  bool doneLoading2 = false;
   bool gotUserLocation = false;
   @override
   void initState() {
@@ -58,83 +59,72 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration:
-          loading == ConnectionState.done ? clearBackground : loadingBackground,
+      decoration: loading == ConnectionState.done
+          ? clearBackground
+          : loading == ConnectionState.waiting
+              ? loadingBackground
+              : darkBackground,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: appBar(),
-        body: body(),
+        body: body(MediaQuery.of(context).size.height,
+            MediaQuery.of(context).size.width),
       ),
     );
   }
 
-  void refresh() {
+  void refresh(ConnectionState load) {
     Future.delayed(
       const Duration(microseconds: 1),
       () {
         if (!doneLoading) {
-          doneLoading = true;
-          setState(() {});
+          setState(() {
+            loading = load;
+            doneLoading = true;
+          });
+        }
+        if (!doneLoading2 && load == ConnectionState.done) {
+          loading = load;
+          setState(() {
+            doneLoading2 = true;
+          });
         }
       },
     );
   }
 
-  Widget body() {
+  Widget body(double deviceHeight, double deviceWidth) {
     if (!gotUserLocation) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Text(
-              "retreiving your location please wait !",
-              style: TextStyle(
-                  fontFamily: "SF Pro Display",
-                  fontSize: 20,
-                  color: Colors.white),
-            ),
-            Icon(
-              Icons.cached,
-              color: Colors.white,
-              size: 20,
-            ),
-          ],
-        ),
-      );
+      return Center(child: _loadingScreen(deviceHeight, deviceWidth));
     }
+    // getTodayforecast(_position.latitude, _position.longitude),
+    // getHourlyForecastWeatherBit(_position.latitude, _position.longitude),
     return Center(
         child: FutureBuilder(
       future:
-          getHourlyForecastWeatherBit(_position.latitude, _position.longitude),
+          getHourlyForecastWeatherApi(_position.latitude, _position.longitude),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          loading = ConnectionState.done;
-          refresh();
+          refresh(snapshot.connectionState);
           double deviceHeight = MediaQuery.of(context).size.height;
           double deviceWidth = MediaQuery.of(context).size.width;
-          return Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  child: const CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 10,
-                  ),
-                ),
-                _lazyLoad(deviceHeight / 5, deviceWidth / 2.5),
-                _lazyLoad(deviceHeight / 15, deviceWidth / 1.1),
-                _lazyLoad(deviceHeight / 3, deviceWidth / 1.1),
-              ]);
+          return _loadingScreen(deviceHeight, deviceWidth);
         } else if (snapshot.connectionState == ConnectionState.done) {
+          dynamic jsonData = jsonDecode(snapshot.data.toString());
+          double temperature = jsonData["current"]["temp_c"];
+          double wind = jsonData["current"]["wind_kph"];
+          double precipitation =
+              jsonData["forecast"]["forecastday"][0]["day"]["totalprecip_mm"];
+          int humidity = jsonData["current"]["humidity"];
+          refresh(snapshot.connectionState);
           return Column(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               sun,
-              _temperature(),
-              _metaData(),
-              _todayForecast(),
+              _temperature(temperature.round(), temperature.round() - 1,
+                  temperature.round() + 1),
+              _metaData(precipitation, wind.round(), humidity),
+              _todayForecast(jsonData),
             ],
           );
         } else {
@@ -145,20 +135,36 @@ class _MyHomePageState extends State<MyHomePage> {
     ));
   }
 
+  Widget _loadingScreen(double deviceHeight, double deviceWidth) {
+    return Column(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+      const SizedBox(
+        width: 100,
+        height: 100,
+        child: CircularProgressIndicator(
+          color: Color(0xFFe0e0e0),
+          strokeWidth: 10,
+        ),
+      ),
+      _lazyLoad(deviceHeight / 5, deviceWidth / 2.5),
+      _lazyLoad(deviceHeight / 15, deviceWidth / 1.1),
+      _lazyLoad(deviceHeight / 3, deviceWidth / 1.1),
+    ]);
+  }
+
   Widget _lazyLoad(double height, double width) {
     return Shimmer.fromColors(
+        baseColor: const Color(0xFFe0e0e0),
+        highlightColor: Colors.white,
         child: Container(
           height: height,
           width: width,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
               borderRadius: BorderRadius.all(Radius.circular(25)),
               color: Colors.white),
-        ),
-        baseColor: const Color(0xFFe0e0e0),
-        highlightColor: Colors.white);
+        ));
   }
 
-  Widget _todayForecast() {
+  Widget _todayForecast(dynamic temperatures) {
     return Container(
       decoration: const BoxDecoration(
           color: Color(0xFF298BC2),
@@ -167,7 +173,7 @@ class _MyHomePageState extends State<MyHomePage> {
       height: MediaQuery.of(context).size.height / 3,
       child:
           Column(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        Container(
+        SizedBox(
           width: MediaQuery.of(context).size.width / 1.3,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -183,20 +189,39 @@ class _MyHomePageState extends State<MyHomePage> {
             ],
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _hourlyTemperature("31°", Icons.cloud, "15.00"),
-            _hourlyTemperature("30°", Icons.cloud, "16.00"),
-            _hourlyTemperature("28°", Icons.cloud, "17.00"),
-            _hourlyTemperature("28°", Icons.cloud, "18.00  "),
-          ],
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        //   children: [
+        //     _hourlyTemperature("31°", Icons.cloud, "15.00"),
+        //     _hourlyTemperature("30°", Icons.cloud, "16.00"),
+        //     _hourlyTemperature("28°", Icons.cloud, "17.00"),
+        //     _hourlyTemperature("28°", Icons.cloud, "18.00  "),
+        //   ],
+        // )
+        Container(
+          width: 1000,
+          height: 200,
+          margin: const EdgeInsets.only(left: 20, right: 22),
+          child: ListView.builder(
+            itemCount: 24,
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) {
+              String imageUrl = temperatures["forecast"]["forecastday"][0]
+                  ["hour"][index]["condition"]["icon"];
+              imageUrl = imageUrl.split("//")[1];
+              double temperature = temperatures["forecast"]["forecastday"][0]
+                  ["hour"][index]["temp_c"];
+              String hour = index < 10 ? '0$index' : '$index';
+              return _hourlyTemperature("${temperature.toInt()}°", imageUrl,
+                  '$hour.00', index == DateTime.now().hour ? true : false);
+            },
+          ),
         )
       ]),
     );
   }
 
-  Widget _metaData() {
+  Widget _metaData(double precipitation, int windSpeed, int humidity) {
     return Container(
         decoration: const BoxDecoration(
           borderRadius: BorderRadius.all(Radius.circular(25)),
@@ -207,9 +232,9 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _metaDataObject(rain, "18%", 20, 70),
-            _metaDataObject(temperature, "67%", 25, 70),
-            _metaDataObject(wind, "25Km/h", 17, 100),
+            _metaDataObject(rain, "${precipitation}mm", 20, 100),
+            _metaDataObject(temperature, "${humidity}%", 25, 70),
+            _metaDataObject(wind, "${windSpeed}Km/h", 17, 100),
           ],
         ));
   }
@@ -235,10 +260,13 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _hourlyTemperature(String temperature, IconData icon, String hour) {
+  Widget _hourlyTemperature(
+      String temperature, String iconUrl, String hour, bool active) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF65C0FF), width: 2),
+        border: Border.all(
+            color: active ? const Color(0xFF65C0FF) : Colors.transparent,
+            width: 2),
         borderRadius: const BorderRadius.all(Radius.circular(25)),
       ),
       height: MediaQuery.of(context).size.height / 5,
@@ -250,10 +278,7 @@ class _MyHomePageState extends State<MyHomePage> {
             temperature,
             style: regularFont(20),
           ),
-          Icon(
-            icon,
-            color: Colors.white,
-          ),
+          Image.network('http://$iconUrl'),
           Text(
             hour,
             style: regularFont(20),
@@ -263,11 +288,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _temperature() {
+  Widget _temperature(int temperature, int maxTemp, int minTemp) {
     return Column(
       children: [
         Text(
-          "30°",
+          "$temperature°",
           style: semiBoldFont(65),
         ),
         Text(
@@ -275,7 +300,7 @@ class _MyHomePageState extends State<MyHomePage> {
           style: regularFont(19),
         ),
         Text(
-          "Max:34° Min:28°",
+          "Max:$maxTemp° Min:$minTemp°",
           style: regularFont(19),
         )
       ],
@@ -283,7 +308,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   PreferredSizeWidget? appBar() {
-    if (gotUserLocation) {
+    if (loading == ConnectionState.done && doneLoading2) {
       return AppBar(
         titleSpacing: 0,
         title: Text(gotUserLocation ? city : "Waiting for Data"),
@@ -293,7 +318,7 @@ class _MyHomePageState extends State<MyHomePage> {
         actions: [
           Container(
               margin: EdgeInsets.only(
-                  right: MediaQuery.of(context).size.width / 2.1),
+                  right: MediaQuery.of(context).size.width / 2.7),
               child: const Icon(Icons.keyboard_arrow_down)),
           const Icon(newNotification)
         ],
@@ -301,7 +326,16 @@ class _MyHomePageState extends State<MyHomePage> {
             const TextStyle(fontFamily: "SF Pro Display", fontSize: 20),
       );
     } else {
-      return null;
+      return AppBar(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          actions: [
+            Container(
+              margin: const EdgeInsets.only(right: 15),
+              child: _lazyLoad(MediaQuery.of(context).size.height / 1.1,
+                  MediaQuery.of(context).size.width / 1.1),
+            ),
+          ]);
     }
   }
 }
