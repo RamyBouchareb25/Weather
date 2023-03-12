@@ -13,11 +13,12 @@ class PermissionHandlingPage extends StatefulWidget {
 }
 
 class PermissionHandlingPageState extends State<PermissionHandlingPage> {
-  Permission p = Permission.waiting;
+  static Permission currentPermission = Permission.waiting;
   @override
   void initState() {
     super.initState();
-    if (p == Permission.accepted) {
+    if (currentPermission == Permission.accepted) {
+      Navigator.pop(context);
       Navigator.push(context, MaterialPageRoute(
         builder: (context) {
           return const MyHomePage();
@@ -26,7 +27,7 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
     } else {
       handleLocationPermission(context).then((value) {
         if (value) {
-          p = Permission.accepted;
+          currentPermission = Permission.accepted;
           Navigator.pop(context);
           Navigator.push(context, MaterialPageRoute(
             builder: (context) {
@@ -34,7 +35,7 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
             },
           ));
         } else {
-          p = Permission.denied;
+          currentPermission = Permission.denied;
         }
       });
     }
@@ -50,11 +51,11 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             ElevatedButton(
                 onPressed: () {
-                  if (p == Permission.denied) {
+                  if (currentPermission == Permission.denied) {
                     setState(() {
                       handleLocationPermission(context).then((value) {
                         if (value) {
-                          p = Permission.accepted;
+                          currentPermission = Permission.accepted;
                           Navigator.pop(context);
                           Navigator.push(context, MaterialPageRoute(
                             builder: (context) {
@@ -62,18 +63,18 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
                             },
                           ));
                         } else {
-                          p = Permission.deniedForever;
+                          currentPermission = Permission.deniedForever;
                           setState(() {});
                         }
                       });
                     });
-                  } else if (p == Permission.deniedForever) {
+                  } else if (currentPermission == Permission.deniedForever) {
                     AppSettings.openAppSettings();
                   }
                 },
-                child: Text(p == Permission.denied
+                child: Text(currentPermission == Permission.denied
                     ? "Request Permission Again !"
-                    : p == Permission.deniedForever
+                    : currentPermission == Permission.deniedForever
                         ? "Please Change Permission from the settings"
                         : ""))
           ]),

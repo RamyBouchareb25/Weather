@@ -81,7 +81,7 @@ Future<bool> handleLocationPermission(BuildContext context) async {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
             'Location services are disabled. Please enable the services')));
-    await Future.delayed(const Duration(seconds: 5));
+    await Future.delayed(const Duration(seconds: 5 ));
     Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(
       builder: (context) {

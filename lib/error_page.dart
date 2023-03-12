@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:weather_app/global.dart';
 import 'package:weather_app/main.dart';
+import 'permission_handling_page.dart' as p;
 
 enum GettingData { retreiving, retreived, failedToRetreive }
 
@@ -12,6 +14,8 @@ class ErrorPage extends StatefulWidget {
 }
 
 class _ErrorPageState extends State<ErrorPage> {
+  static Permission currentPermission =
+      p.PermissionHandlingPageState.currentPermission;
   GettingData dataGathering = GettingData.failedToRetreive;
   final String failedMessage =
       "Failed to get your location please try again and verify your connection and location is activated";
@@ -32,21 +36,27 @@ class _ErrorPageState extends State<ErrorPage> {
                       ? retreivingMessage
                       : retreivedMessage),
               ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    bool locationEnabled =
+                        await Geolocator.isLocationServiceEnabled();
                     setState(() {
-                      dataGathering = GettingData.retreiving;
-                      handleLocationPermission(context)
-                          .then((value) => getUserCity((val, val2) {
-                                dataGathering = GettingData.retreived;
-                                Navigator.pop(context);
-                                Navigator.push(context, MaterialPageRoute(
-                                  builder: (context) {
-                                    return const MyApp();
-                                  },
-                                ));
-                              }, (error, stackTrace) {
-                                dataGathering = GettingData.failedToRetreive;
-                              }));
+                      locationEnabled
+                          ? dataGathering = GettingData.retreiving
+                          : dataGathering = GettingData.failedToRetreive;
+                      if (locationEnabled) {
+                        handleLocationPermission(context)
+                            .then((value) => getUserCity((val, val2) {
+                                  dataGathering = GettingData.retreived;
+                                  Navigator.pop(context);
+                                  Navigator.push(context, MaterialPageRoute(
+                                    builder: (context) {
+                                      return const MyApp();
+                                    },
+                                  ));
+                                }, (error, stackTrace) {
+                                  dataGathering = GettingData.failedToRetreive;
+                                }));
+                      }
                     });
                   },
                   child: const Text("Retry"))

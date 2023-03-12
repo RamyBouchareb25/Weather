@@ -7,6 +7,7 @@ import 'global.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import './models/weather_models.dart';
+import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 void main() {
   // DartPluginRegistrant.ensureInitialized();
@@ -67,10 +68,19 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: appBar(),
-        body: body(MediaQuery.of(context).size.height,
-            MediaQuery.of(context).size.width),
+        body: LiquidPullToRefresh(
+          onRefresh: _handleRefresh,
+          child: ListView(children: [
+            body(MediaQuery.of(context).size.height,
+                MediaQuery.of(context).size.width),
+          ]),
+        ),
       ),
     );
+  }
+
+  Future<void> _handleRefresh() {
+    return getHourlyForecastWeatherApi(_position.latitude, _position.longitude);
   }
 
   void refresh(ConnectionState load) {
