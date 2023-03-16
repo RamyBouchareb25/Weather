@@ -25,7 +25,7 @@ const BoxDecoration darkBackground = BoxDecoration(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight));
 const BoxDecoration loadingBackground = BoxDecoration(
-  color: Colors.white,
+  color: blueBackground,
 );
 
 const BoxDecoration clearBackground = BoxDecoration(
@@ -34,10 +34,12 @@ const BoxDecoration clearBackground = BoxDecoration(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight));
 
-const String apiKeyOpenWeather = "288215c433ffb3a0177d455c0c0b2375";
-const String apiKeyWeatherBit = "089633a29e41407fb4ec076bd8b62740";
-const String apiKeyWeatherBitFreeLimited = "b0b9f8d123ff4709ad7a434702191208";
+const Color blueBackground = Color(0xFF298BC2);
+const Color clearBlue = Color(0xFF65C0FF);
+
 const String apiKeyWeatherApi = "82f75908511d41dc8bb154417231003";
+const String apiKeyGoogleAndroid = "AIzaSyB-pRwCDO_KGDFr55kbliM0eyYDjeyJ5KQ";
+const String apiKeyGoogleIos = "AIzaSyA0JdCvkl1ZY2PN4nzLxUf5DkUafBsH9sE";
 
 const IconData location = weather_icons.WeatherIcons.location;
 const IconData calendar = weather_icons.WeatherIcons.calendar;
@@ -81,7 +83,7 @@ Future<bool> handleLocationPermission(BuildContext context) async {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
             'Location services are disabled. Please enable the services')));
-    await Future.delayed(const Duration(seconds: 5 ));
+    await Future.delayed(const Duration(seconds: 5));
     Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(
       builder: (context) {

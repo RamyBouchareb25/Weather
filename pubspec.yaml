@@ -47,6 +47,8 @@ dependencies:
   shimmer: ^2.0.0
   shared_preferences: ^2.0.18
   liquid_pull_to_refresh: ^3.0.1
+  flutter_google_places: ^0.3.0
+  google_maps_webservice: ^0.0.20-nullsafety.5
 
 dev_dependencies:
   flutter_test:
