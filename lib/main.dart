@@ -1,16 +1,24 @@
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:weather_app/permission_handling_page.dart';
-// import 'package:weather_app/search_bar_test.dart';
+import 'package:localstorage/localstorage.dart';
+import 'package:weather_app/connectivity_test.dart';
+import 'package:weather_app/internet_status.dart';
+import 'package:weather_app/search_bar_test.dart';
 import 'global.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import './models/weather_models.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
-import 'package:flutter_google_places/flutter_google_places.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+// import 'package:weather_app/permission_handling_page.dart';
+// import 'package:weather_app/search_bar_test.dart';
+// import 'package:flutter_google_places/flutter_google_places.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,13 +36,37 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const PermissionHandlingPage(),
+      home: const Search(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  static late bool _firstTimeLoading;
+  static late bool _getFromStorage;
+  static LocalStorage _localStorage = LocalStorage("Storage.json");
+
+  static bool getFirstTimeLoading() {
+    return _firstTimeLoading;
+  }
+
+  static LocalStorage getLocalStorage() {
+    return _localStorage;
+  }
+
+  static void setLocalStorage(LocalStorage value) {
+    _localStorage = value;
+  }
+
+  static void setFirstTimeLoading(bool value) {
+    _firstTimeLoading = value;
+  }
+
+  final double latitude;
+  final double longitude;
+  final String city;
+  const MyHomePage(
+      {super.key, required this.latitude, required this.longitude,required this.city});
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
@@ -44,12 +76,41 @@ class _MyHomePageState extends State<MyHomePage> {
   late Position _position;
   late ConnectionState loading;
   late String? googleApiKey;
+  late DateTime oldDate;
+  late InternetStatus currentInternetStatus;
   bool doneLoading = false;
   bool doneLoading2 = false;
   bool gotUserLocation = false;
+  Map _source = {ConnectivityResult.none: false};
+  final NetworkConnectivity _networkConnectivity = NetworkConnectivity.instance;
+  late String connectionStatus;
   @override
   void initState() {
     super.initState();
+    _networkConnectivity.initialise();
+    _networkConnectivity.myStream.listen((event) {
+      _source = event;
+      switch (_source.keys.toList()[0]) {
+        case ConnectivityResult.mobile:
+          connectionStatus =
+              _source.values.toList()[0] ? 'Mobile: Online' : 'Mobile: Offline';
+          currentInternetStatus = _source.values.toList()[0]
+              ? InternetStatus.mobileOnline
+              : InternetStatus.mobileOffline;
+          break;
+        case ConnectivityResult.wifi:
+          connectionStatus =
+              _source.values.toList()[0] ? 'WiFi: Online' : 'WiFi: Offline';
+          currentInternetStatus = _source.values.toList()[0]
+              ? InternetStatus.wifiOnline
+              : InternetStatus.wifiOffline;
+          break;
+        case ConnectivityResult.none:
+        default:
+          connectionStatus = 'Offline';
+          currentInternetStatus = InternetStatus.offline;
+      }
+    });
     googleApiKey = defaultTargetPlatform == TargetPlatform.android
         ? apiKeyGoogleAndroid
         : defaultTargetPlatform == TargetPlatform.iOS
@@ -78,7 +139,37 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _handleRefresh() {
-    return getHourlyForecastWeatherApi(_position.latitude, _position.longitude);
+    if (currentInternetStatus == InternetStatus.mobileOnline ||
+        currentInternetStatus == InternetStatus.wifiOnline) {
+      return getHourlyForecastWeatherApi(
+          _position.latitude, _position.longitude);
+    } else {
+      showSnackBar("No connection Available");
+      return Future.delayed(Duration.zero);
+    }
+  }
+
+  void showSnackBar(String data) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data)));
+  }
+
+  Future<String> _getWeatherData(double lat, double lon) async {
+    final prefs = await SharedPreferences.getInstance();
+    MyHomePage._getFromStorage =
+        prefs.getString("Weather") == null ? false : true;
+    if (!MyHomePage._getFromStorage) {
+      Response<dynamic> response = await getHourlyForecastWeatherApi(lat, lon);
+      prefs.setString("Weather", response.toString());
+      oldDate = DateTime.now();
+      prefs.setString("TimeRefresh", DateTime.now().toString());
+      MyHomePage.setFirstTimeLoading(false);
+      return response.toString();
+    }
+    oldDate = DateTime.parse(prefs.getString("TimeRefresh")!);
+    if (oldDate.difference(DateTime.now()).inHours >= 2) {
+      showSnackBar("Data Expired");
+    }
+    return prefs.getString("Weather")!;
   }
 
   void refresh(ConnectionState load) {
@@ -107,8 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     return Center(
         child: FutureBuilder(
-      future:
-          getHourlyForecastWeatherApi(_position.latitude, _position.longitude),
+      future: _getWeatherData(_position.latitude, _position.longitude),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           refresh(snapshot.connectionState);
@@ -116,7 +206,7 @@ class _MyHomePageState extends State<MyHomePage> {
           double deviceWidth = MediaQuery.of(context).size.width;
           return _loadingScreen(deviceHeight, deviceWidth);
         } else if (snapshot.connectionState == ConnectionState.done) {
-          dynamic jsonData = jsonDecode(snapshot.data.toString());
+          dynamic jsonData = jsonDecode(snapshot.data!);
           double temperature = jsonData["current"]["temp_c"];
           double wind = jsonData["current"]["wind_kph"];
           double precipitation =
@@ -216,13 +306,14 @@ class _MyHomePageState extends State<MyHomePage> {
             itemCount: 24,
             scrollDirection: Axis.horizontal,
             itemBuilder: (context, index) {
-              String imageUrl = temperatures["forecast"]["forecastday"][0]
-                  ["hour"][index]["condition"]["icon"];
-              imageUrl = imageUrl.split("//")[1];
               double temperature = temperatures["forecast"]["forecastday"][0]
                   ["hour"][index]["temp_c"];
               String hour = index < 10 ? '0$index' : '$index';
-              return _hourlyTemperature("${temperature.toInt()}°", imageUrl,
+              var iconUrl = temperatures["forecast"]["forecastday"][0]["hour"]
+                      [index]["condition"]["icon"]
+                  .split("//")[1];
+
+              return _hourlyTemperature("${temperature.toInt()}°", iconUrl,
                   '$hour.00', index == DateTime.now().hour ? true : false);
             },
           ),
@@ -288,7 +379,9 @@ class _MyHomePageState extends State<MyHomePage> {
             temperature,
             style: regularFont(20),
           ),
-          Image.network('http://$iconUrl'),
+          CachedNetworkImage(
+            imageUrl: "http://$iconUrl",
+          ),
           Text(
             hour,
             style: regularFont(20),

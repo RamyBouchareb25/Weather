@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:weather_app/error_page.dart';
+import 'package:weather_app/search_bar_test.dart';
 import 'CustomFonts/weather_icons_icons.dart' as weather_icons;
+import 'package:localstorage/localstorage.dart';
+import './main.dart';
 
 Image sunRain = Image.asset("Images/Sun_cloud_angled_rain.png");
 Image sun = Image.asset("Images/Sun_cloud.png");
@@ -57,10 +60,19 @@ enum Permission {
 }
 
 Future<String> getUserLocation(Position myLocation) async {
-  List<Placemark> placemarks =
-      await placemarkFromCoordinates(myLocation.latitude, myLocation.longitude);
-  Placemark place = placemarks[0];
-  return place.administrativeArea!;
+  LocalStorage storage = MyHomePage.getLocalStorage();
+  await storage.ready;
+  MyHomePage.getLocalStorage().getItem("Location") == null
+      ? MyHomePage.setFirstTimeLoading(true)
+      : MyHomePage.setFirstTimeLoading(false);
+  if (MyHomePage.getFirstTimeLoading()) {
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+        myLocation.latitude, myLocation.longitude);
+    Placemark place = placemarks[0];
+    storage.setItem("Location", place.administrativeArea);
+    return place.administrativeArea!;
+  }
+  return storage.getItem("Location");
 }
 
 getUserCity(void Function(String cityName, Position position) successFunction,
@@ -87,7 +99,7 @@ Future<bool> handleLocationPermission(BuildContext context) async {
     Navigator.pop(context);
     Navigator.push(context, MaterialPageRoute(
       builder: (context) {
-        return const ErrorPage();
+        return const Search();
       },
     ));
     return false;

@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:weather_app/location.dart';
 import 'package:weather_app/main.dart';
+import 'package:weather_app/search_bar_test.dart';
 import 'global.dart';
 import 'package:app_settings/app_settings.dart';
 
@@ -21,7 +23,7 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
       Navigator.pop(context);
       Navigator.push(context, MaterialPageRoute(
         builder: (context) {
-          return const MyHomePage();
+          return const LocationGetter();
         },
       ));
     } else {
@@ -31,7 +33,7 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
           Navigator.pop(context);
           Navigator.push(context, MaterialPageRoute(
             builder: (context) {
-              return const MyHomePage();
+              return const LocationGetter();
             },
           ));
         } else {
@@ -41,8 +43,10 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
     }
   }
 
+  late BuildContext ctx;
   @override
   Widget build(BuildContext context) {
+    ctx = context;
     return Container(
       decoration: clearBackground,
       child: Scaffold(
@@ -56,15 +60,20 @@ class PermissionHandlingPageState extends State<PermissionHandlingPage> {
                       handleLocationPermission(context).then((value) {
                         if (value) {
                           currentPermission = Permission.accepted;
-                          Navigator.pop(context);
+                          Navigator.pop(ctx);
                           Navigator.push(context, MaterialPageRoute(
                             builder: (context) {
-                              return const MyHomePage();
+                              return const LocationGetter();
                             },
                           ));
                         } else {
                           currentPermission = Permission.deniedForever;
-                          setState(() {});
+                          Navigator.pop(ctx);
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (context) {
+                              return const Search();
+                            },
+                          ));
                         }
                       });
                     });

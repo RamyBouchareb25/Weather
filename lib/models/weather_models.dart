@@ -8,7 +8,7 @@ Future<Response<dynamic>> getHourlyForecastWeatherApi(
       'http://api.weatherapi.com/v1/forecast.json?key=82f75908511d41dc8bb154417231003&q=$lat,$lon&days=1&aqi=no&alerts=no');
   return response;
 }
-
+//! Not Implemented cause lots of bugs !!!
 Future<Response<dynamic>> getDaylyForecastWeatherApi(
     double lat, double lon, int day) async {
   bool future;
@@ -28,8 +28,6 @@ Future<Response<dynamic>> getDaylyForecastWeatherApi(
   return response;
 }
 
-void main() {
-  getDaylyForecastWeatherApi(36.795059, 2.920257, 3)
-      .then((value) => print(value));
-  // print(DateTime.now());
+void main(List<String> args) {
+  getHourlyForecastWeatherApi(32, 32).then((value) => print(value));
 }
