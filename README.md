@@ -86,6 +86,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - The open-source community for valuable contributions and inspirations.
 
 ---
-Have fun exploring the weather with our Flutter Weather App! If you have any questions or need assistance, feel free to contact us at support@example.com.
+Have fun exploring the weather with our Flutter Weather App! If you have any questions or need assistance, feel free to contact us at ramybouchareb@outlook.com.
 
 Enjoy the weather! ☀️🌧️❄️
